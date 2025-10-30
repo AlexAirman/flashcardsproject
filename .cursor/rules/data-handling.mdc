@@ -1,0 +1,212 @@
+---
+alwaysApply: true
+description: Data handling patterns for server components, server actions, and validation
+---
+
+# Data Handling Architecture
+
+This project follows strict patterns for data handling in Next.js to ensure security, type safety, and optimal performance.
+
+## Data Retrieval
+
+**All data retrieval must be done via Server Components.**
+
+- Use async Server Components to fetch data directly from the database
+- Never fetch data in Client Components - use Server Components and pass data as props
+- Leverage React Server Components for automatic deduplication and caching
+
+### Example
+
+```tsx
+// app/flashcards/page.tsx (Server Component)
+import { db } from '@/db';
+
+export default async function FlashcardsPage() {
+  const flashcards = await db.query.flashcards.findMany();
+  
+  return <FlashcardsList flashcards={flashcards} />;
+}
+```
+
+## Data Mutations (Inserts, Updates, Deletes)
+
+**All database mutations must be done via Server Actions.**
+
+- Create server actions in separate files with `'use server'` directive
+- Never perform mutations directly in Server Components
+- All server actions must return a type-safe result object
+
+### Example
+
+```tsx
+// app/actions/flashcards.ts
+'use server'
+
+import { db } from '@/db';
+import { flashcards } from '@/db/schema';
+
+export async function createFlashcard(data: CreateFlashcardInput) {
+  // validation and insertion logic
+  const result = await db.insert(flashcards).values(data);
+  return { success: true, data: result };
+}
+```
+
+## Data Validation
+
+**All data validation must use Zod.**
+
+- Define Zod schemas for all data inputs
+- Validate all data at the entry point of server actions
+- Extract TypeScript types from Zod schemas using `z.infer<>`
+
+### Example
+
+```tsx
+import { z } from 'zod';
+
+const createFlashcardSchema = z.object({
+  question: z.string().min(1, 'Question is required'),
+  answer: z.string().min(1, 'Answer is required'),
+  deckId: z.string().uuid(),
+});
+
+type CreateFlashcardInput = z.infer<typeof createFlashcardSchema>;
+
+export async function createFlashcard(input: CreateFlashcardInput) {
+  const validated = createFlashcardSchema.parse(input);
+  // proceed with validated data
+}
+```
+
+## Server Action Type Safety
+
+**DO NOT use FormData as the type for server action parameters.**
+
+- Always define explicit TypeScript types for server action inputs
+- Derive types from Zod schemas using `z.infer<>`
+- If receiving FormData, parse it immediately and convert to typed object
+
+### ❌ Incorrect
+
+```tsx
+export async function createFlashcard(formData: FormData) {
+  // Don't do this
+}
+```
+
+### ✅ Correct
+
+```tsx
+export async function createFlashcard(input: CreateFlashcardInput) {
+  const validated = createFlashcardSchema.parse(input);
+  // ...
+}
+```
+
+## Complete Pattern Example
+
+```tsx
+// db/schema.ts
+import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
+
+export const flashcards = pgTable('flashcards', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  question: text('question').notNull(),
+  answer: text('answer').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// lib/validations/flashcard.ts
+import { z } from 'zod';
+
+export const createFlashcardSchema = z.object({
+  question: z.string().min(1).max(500),
+  answer: z.string().min(1).max(1000),
+});
+
+export type CreateFlashcardInput = z.infer<typeof createFlashcardSchema>;
+
+// app/actions/flashcards.ts
+'use server'
+
+import { db } from '@/db';
+import { flashcards } from '@/db/schema';
+import { createFlashcardSchema, type CreateFlashcardInput } from '@/lib/validations/flashcard';
+import { revalidatePath } from 'next/cache';
+
+export async function createFlashcard(input: CreateFlashcardInput) {
+  try {
+    // Validate input
+    const validated = createFlashcardSchema.parse(input);
+    
+    // Insert to database
+    const [result] = await db.insert(flashcards).values(validated).returning();
+    
+    // Revalidate relevant paths
+    revalidatePath('/flashcards');
+    
+    return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: 'Failed to create flashcard' };
+  }
+}
+
+// app/flashcards/page.tsx (Server Component)
+import { db } from '@/db';
+import { CreateFlashcardForm } from './create-flashcard-form';
+
+export default async function FlashcardsPage() {
+  // Data retrieval in Server Component
+  const flashcards = await db.query.flashcards.findMany();
+  
+  return (
+    <div>
+      <h1>Flashcards</h1>
+      <CreateFlashcardForm />
+      {/* Render flashcards */}
+    </div>
+  );
+}
+
+// app/flashcards/create-flashcard-form.tsx (Client Component)
+'use client'
+
+import { createFlashcard } from '@/app/actions/flashcards';
+import { useState } from 'react';
+
+export function CreateFlashcardForm() {
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Pass typed object to server action
+    const result = await createFlashcard({
+      question,
+      answer,
+    });
+    
+    if (result.success) {
+      // Handle success
+      setQuestion('');
+      setAnswer('');
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Form fields */}
+    </form>
+  );
+}
+```
+
+## Key Principles
+
+1. **Server Components for reads** - Fetch data server-side
+2. **Server Actions for writes** - All mutations via server actions
+3. **Zod for validation** - Validate all inputs with Zod schemas
+4. **Type safety** - Use explicit TypeScript types derived from Zod
+5. **No FormData types** - Convert FormData to typed objects immediately

@@ -1,0 +1,155 @@
+---
+alwaysApply: true
+---
+
+# Drizzle ORM Database Interactions
+
+This project uses **Drizzle ORM** for all database interactions. All database operations must use the Drizzle schema and query API.
+
+## Database Setup
+
+- **Database Client**: [src/db/index.ts](mdc:src/db/index.ts) - Exports the configured `db` instance
+- **Schema Definitions**: [src/db/schema.ts](mdc:src/db/schema.ts) - Contains all table schemas
+- **Example Usage**: [src/db/example.ts](mdc:src/db/example.ts) - Reference implementation
+
+## Database Tables
+
+The project currently has two main tables:
+
+1. **decksTable** - User-created flashcard decks
+2. **cardsTable** - Individual flashcards within decks (with cascade delete)
+
+## Required Imports
+
+Always import the following when working with the database:
+
+```typescript
+import { db } from '@/db/index';
+import { decksTable, cardsTable } from '@/db/schema';
+import { eq, and, or, desc, asc } from 'drizzle-orm';
+```
+
+## Database Operation Patterns
+
+### SELECT Operations
+
+```typescript
+// Get all records
+const allDecks = await db.select().from(decksTable);
+
+// Get with WHERE clause
+const userDecks = await db
+  .select()
+  .from(decksTable)
+  .where(eq(decksTable.userId, userId));
+
+// Get with multiple conditions
+const filteredCards = await db
+  .select()
+  .from(cardsTable)
+  .where(and(
+    eq(cardsTable.deckId, deckId),
+    eq(cardsTable.id, cardId)
+  ));
+
+// Get with ORDER BY
+const sortedDecks = await db
+  .select()
+  .from(decksTable)
+  .orderBy(desc(decksTable.createdAt));
+```
+
+### INSERT Operations
+
+```typescript
+// Single insert with returning
+const newDeck: typeof decksTable.$inferInsert = {
+  userId: 'user_123',
+  name: 'My Deck',
+  description: 'Description here',
+};
+
+const [deck] = await db
+  .insert(decksTable)
+  .values(newDeck)
+  .returning();
+
+// Multiple inserts
+const cards: typeof cardsTable.$inferInsert[] = [
+  { deckId: 1, front: 'Question 1', back: 'Answer 1' },
+  { deckId: 1, front: 'Question 2', back: 'Answer 2' },
+];
+
+await db.insert(cardsTable).values(cards);
+```
+
+### UPDATE Operations
+
+```typescript
+// Update with WHERE clause
+await db
+  .update(cardsTable)
+  .set({
+    back: 'Updated answer',
+    updatedAt: new Date(),
+  })
+  .where(eq(cardsTable.id, cardId));
+
+// Update with returning
+const [updatedDeck] = await db
+  .update(decksTable)
+  .set({ name: 'New Name', updatedAt: new Date() })
+  .where(eq(decksTable.id, deckId))
+  .returning();
+```
+
+### DELETE Operations
+
+```typescript
+// Delete with WHERE clause
+await db
+  .delete(cardsTable)
+  .where(eq(cardsTable.id, cardId));
+
+// Delete with cascade (decks cascade to cards)
+await db
+  .delete(decksTable)
+  .where(eq(decksTable.id, deckId));
+```
+
+## Type Inference
+
+Always use Drizzle's type inference for inserts and selects:
+
+```typescript
+// For inserts
+type NewDeck = typeof decksTable.$inferInsert;
+type NewCard = typeof cardsTable.$inferInsert;
+
+// For selects
+type Deck = typeof decksTable.$inferSelect;
+type Card = typeof cardsTable.$inferSelect;
+```
+
+## Important Rules
+
+1. **Never use raw SQL queries** - Always use Drizzle's query builder
+2. **Always use the schema** - Import table definitions from [src/db/schema.ts](mdc:src/db/schema.ts)
+3. **Always use the db instance** - Import from [src/db/index.ts](mdc:src/db/index.ts)
+4. **Type safety** - Use `$inferInsert` and `$inferSelect` for type-safe operations
+5. **Update timestamps** - Always update the `updatedAt` field when modifying records
+6. **Use operators** - Import comparison operators (`eq`, `and`, `or`, etc.) from `drizzle-orm`
+7. **Cascade deletes** - Remember that deleting a deck will automatically delete all its cards
+
+## Server-Side Only
+
+All database operations must be performed server-side:
+- Server Actions (use `'use server'` directive)
+- API Routes (in `app/api/` directory)
+- Server Components (async components without `'use client'`)
+
+**Never** perform database operations in client components.
+
+## Example Reference
+
+See [src/db/example.ts](mdc:src/db/example.ts) for complete working examples of all CRUD operations.
