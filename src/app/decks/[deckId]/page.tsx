@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EditDeckDialog } from "./edit-deck-dialog";
 import { AddCardDialog } from "./add-card-dialog";
 import { EditCardDialog } from "./edit-card-dialog";
+import { DeleteCardDialog } from "./delete-card-dialog";
 
 type Props = {
   params: Promise<{
@@ -100,12 +101,18 @@ export default async function DeckPage({ params }: Props) {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-lg">Front</CardTitle>
-                  <EditCardDialog
-                    cardId={card.id}
-                    deckId={deckIdNum}
-                    currentFront={card.front}
-                    currentBack={card.back}
-                  />
+                  <div className="flex gap-2">
+                    <EditCardDialog
+                      cardId={card.id}
+                      deckId={deckIdNum}
+                      currentFront={card.front}
+                      currentBack={card.back}
+                    />
+                    <DeleteCardDialog
+                      cardId={card.id}
+                      deckId={deckIdNum}
+                    />
+                  </div>
                 </div>
                 <CardDescription className="text-base text-foreground mt-2">
                   {card.front}

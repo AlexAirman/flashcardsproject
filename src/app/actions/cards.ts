@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { getDeckByIdForUser } from "@/db/queries/decks";
-import { createCard, updateCard } from "@/db/queries/cards";
+import { createCard, updateCard, deleteCard } from "@/db/queries/cards";
 import { z } from "zod";
 
 // Validation schemas
@@ -20,8 +20,14 @@ const updateCardSchema = z.object({
   back: z.string().min(1, "Back side is required").max(1000),
 });
 
+const deleteCardSchema = z.object({
+  cardId: z.number(),
+  deckId: z.number(),
+});
+
 export type CreateCardInput = z.infer<typeof createCardSchema>;
 export type UpdateCardInput = z.infer<typeof updateCardSchema>;
+export type DeleteCardInput = z.infer<typeof deleteCardSchema>;
 
 // Create card action
 export async function createCardAction(input: CreateCardInput) {
@@ -95,6 +101,40 @@ export async function updateCardAction(input: UpdateCardInput) {
       return { success: false, error: error.errors[0].message };
     }
     return { success: false, error: "Failed to update card" };
+  }
+}
+
+// Delete card action
+export async function deleteCardAction(input: DeleteCardInput) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Validate input
+    const validated = deleteCardSchema.parse(input);
+
+    // Verify deck ownership (cards belong to decks)
+    const deck = await getDeckByIdForUser(validated.deckId, userId);
+    
+    if (!deck) {
+      return { success: false, error: "Deck not found or access denied" };
+    }
+
+    // Delete the card
+    await deleteCard(validated.cardId);
+
+    revalidatePath(`/decks/${validated.deckId}`);
+    revalidatePath('/dashboard');
+
+    return { success: true };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.errors[0].message };
+    }
+    return { success: false, error: "Failed to delete card" };
   }
 }
 
