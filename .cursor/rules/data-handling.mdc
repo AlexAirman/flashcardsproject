@@ -1,25 +1,58 @@
 ---
-alwaysApply: true
-description: Data handling patterns for server components, server actions, and validation
+alwaysApply: false
 ---
-
 # Data Handling Architecture
 
 This project follows strict patterns for data handling in Next.js to ensure security, type safety, and optimal performance.
 
+## Database Query Organization
+
+**All database operations must be abstracted into helper functions in the `db/queries` directory.**
+
+- Create dedicated query/mutation functions in `db/queries`
+- Never perform direct database calls in Server Components or Server Actions
+- Organize queries by domain (e.g., `db/queries/flashcards.ts`, `db/queries/users.ts`)
+- Each query function should handle a single, well-defined database operation
+
+### Directory Structure
+
+```
+src/
+  db/
+    queries/
+      flashcards.ts    # All flashcard-related queries
+      decks.ts         # All deck-related queries
+      users.ts         # All user-related queries
+```
+
 ## Data Retrieval
 
-**All data retrieval must be done via Server Components.**
+**All data retrieval must be done via Server Components using query functions from `db/queries`.**
 
-- Use async Server Components to fetch data directly from the database
+- Use async Server Components to fetch data
+- Call query functions from `db/queries` directory
 - Never fetch data in Client Components - use Server Components and pass data as props
 - Leverage React Server Components for automatic deduplication and caching
+- Never write raw database queries in Server Components
 
 ### Example
 
 ```tsx
-// app/flashcards/page.tsx (Server Component)
+// db/queries/flashcards.ts
 import { db } from '@/db';
+
+export async function getAllFlashcards() {
+  return await db.query.flashcards.findMany();
+}
+
+export async function getFlashcardsByDeck(deckId: string) {
+  return await db.query.flashcards.findMany({
+    where: (flashcards, { eq }) => eq(flashcards.deckId, deckId),
+  });
+}
+
+// app/flashcards/page.tsx (Server Component)
+import { getAllFlashcards } from '@/db/queries/flashcards';
 
 export default async function FlashcardsPage() {
   const flashcards = await db.query.flashcards.findMany();
@@ -30,25 +63,57 @@ export default async function FlashcardsPage() {
 
 ## Data Mutations (Inserts, Updates, Deletes)
 
-**All database mutations must be done via Server Actions.**
+**All database mutations must be done via Server Actions using mutation functions from `db/queries`.**
 
 - Create server actions in separate files with `'use server'` directive
+- Server actions should call mutation functions from `db/queries`
 - Never perform mutations directly in Server Components
+- Never write raw database mutations in Server Actions
 - All server actions must return a type-safe result object
 
 ### Example
 
 ```tsx
-// app/actions/flashcards.ts
-'use server'
-
+// db/queries/flashcards.ts
 import { db } from '@/db';
 import { flashcards } from '@/db/schema';
 
-export async function createFlashcard(data: CreateFlashcardInput) {
-  // validation and insertion logic
-  const result = await db.insert(flashcards).values(data);
-  return { success: true, data: result };
+export async function createFlashcard(data: {
+  question: string;
+  answer: string;
+  deckId: string;
+}) {
+  const [result] = await db.insert(flashcards).values(data).returning();
+  return result;
+}
+
+export async function updateFlashcard(id: string, data: Partial<typeof flashcards.$inferInsert>) {
+  const [result] = await db
+    .update(flashcards)
+    .set(data)
+    .where(eq(flashcards.id, id))
+    .returning();
+  return result;
+}
+
+export async function deleteFlashcard(id: string) {
+  await db.delete(flashcards).where(eq(flashcards.id, id));
+}
+
+// app/actions/flashcards.ts
+'use server'
+
+import { createFlashcard } from '@/db/queries/flashcards';
+import { revalidatePath } from 'next/cache';
+
+export async function createFlashcardAction(data: CreateFlashcardInput) {
+  try {
+    const result = await createFlashcard(data);
+    revalidatePath('/flashcards');
+    return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: 'Failed to create flashcard' };
+  }
 }
 ```
 
@@ -114,8 +179,51 @@ export const flashcards = pgTable('flashcards', {
   id: uuid('id').defaultRandom().primaryKey(),
   question: text('question').notNull(),
   answer: text('answer').notNull(),
+  deckId: uuid('deck_id').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+// db/queries/flashcards.ts
+import { db } from '@/db';
+import { flashcards } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+
+export async function getAllFlashcards() {
+  return await db.query.flashcards.findMany({
+    orderBy: (flashcards, { desc }) => [desc(flashcards.createdAt)],
+  });
+}
+
+export async function getFlashcardById(id: string) {
+  return await db.query.flashcards.findFirst({
+    where: (flashcards, { eq }) => eq(flashcards.id, id),
+  });
+}
+
+export async function createFlashcard(data: {
+  question: string;
+  answer: string;
+  deckId: string;
+}) {
+  const [result] = await db.insert(flashcards).values(data).returning();
+  return result;
+}
+
+export async function updateFlashcard(
+  id: string,
+  data: Partial<typeof flashcards.$inferInsert>
+) {
+  const [result] = await db
+    .update(flashcards)
+    .set(data)
+    .where(eq(flashcards.id, id))
+    .returning();
+  return result;
+}
+
+export async function deleteFlashcard(id: string) {
+  await db.delete(flashcards).where(eq(flashcards.id, id));
+}
 
 // lib/validations/flashcard.ts
 import { z } from 'zod';
@@ -123,6 +231,7 @@ import { z } from 'zod';
 export const createFlashcardSchema = z.object({
   question: z.string().min(1).max(500),
   answer: z.string().min(1).max(1000),
+  deckId: z.string().uuid(),
 });
 
 export type CreateFlashcardInput = z.infer<typeof createFlashcardSchema>;
@@ -130,18 +239,17 @@ export type CreateFlashcardInput = z.infer<typeof createFlashcardSchema>;
 // app/actions/flashcards.ts
 'use server'
 
-import { db } from '@/db';
-import { flashcards } from '@/db/schema';
+import { createFlashcard } from '@/db/queries/flashcards';
 import { createFlashcardSchema, type CreateFlashcardInput } from '@/lib/validations/flashcard';
 import { revalidatePath } from 'next/cache';
 
-export async function createFlashcard(input: CreateFlashcardInput) {
+export async function createFlashcardAction(input: CreateFlashcardInput) {
   try {
     // Validate input
     const validated = createFlashcardSchema.parse(input);
     
-    // Insert to database
-    const [result] = await db.insert(flashcards).values(validated).returning();
+    // Call query function to insert to database
+    const result = await createFlashcard(validated);
     
     // Revalidate relevant paths
     revalidatePath('/flashcards');
@@ -153,12 +261,12 @@ export async function createFlashcard(input: CreateFlashcardInput) {
 }
 
 // app/flashcards/page.tsx (Server Component)
-import { db } from '@/db';
+import { getAllFlashcards } from '@/db/queries/flashcards';
 import { CreateFlashcardForm } from './create-flashcard-form';
 
 export default async function FlashcardsPage() {
-  // Data retrieval in Server Component
-  const flashcards = await db.query.flashcards.findMany();
+  // Data retrieval via query function
+  const flashcards = await getAllFlashcards();
   
   return (
     <div>
@@ -172,7 +280,7 @@ export default async function FlashcardsPage() {
 // app/flashcards/create-flashcard-form.tsx (Client Component)
 'use client'
 
-import { createFlashcard } from '@/app/actions/flashcards';
+import { createFlashcardAction } from '@/app/actions/flashcards';
 import { useState } from 'react';
 
 export function CreateFlashcardForm() {
@@ -183,9 +291,10 @@ export function CreateFlashcardForm() {
     e.preventDefault();
     
     // Pass typed object to server action
-    const result = await createFlashcard({
+    const result = await createFlashcardAction({
       question,
       answer,
+      deckId: 'some-deck-id',
     });
     
     if (result.success) {
@@ -205,8 +314,10 @@ export function CreateFlashcardForm() {
 
 ## Key Principles
 
-1. **Server Components for reads** - Fetch data server-side
-2. **Server Actions for writes** - All mutations via server actions
-3. **Zod for validation** - Validate all inputs with Zod schemas
-4. **Type safety** - Use explicit TypeScript types derived from Zod
-5. **No FormData types** - Convert FormData to typed objects immediately
+1. **Query abstraction** - All database operations in `db/queries` directory
+2. **Server Components for reads** - Fetch data server-side using query functions
+3. **Server Actions for writes** - All mutations via server actions using mutation functions
+4. **Zod for validation** - Validate all inputs with Zod schemas
+5. **Type safety** - Use explicit TypeScript types derived from Zod
+6. **No FormData types** - Convert FormData to typed objects immediately
+7. **Separation of concerns** - Keep database logic separate from business logic

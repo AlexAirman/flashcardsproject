@@ -1,7 +1,15 @@
 import 'dotenv/config';
-import { eq } from 'drizzle-orm';
-import { db } from './index';
 import { decksTable, cardsTable } from './schema';
+import {
+  createDeck,
+  getDecksByUserId,
+  deleteDeck,
+} from './queries/decks';
+import {
+  createCards,
+  getCardsByDeckId,
+  updateCardByFront,
+} from './queries/cards';
 
 async function main() {
   // Create a new deck for learning Russian
@@ -11,7 +19,7 @@ async function main() {
     description: 'Basic Russian vocabulary for everyday use',
   };
 
-  const [deck] = await db.insert(decksTable).values(newDeck).returning();
+  const deck = await createDeck(newDeck);
   console.log('New deck created!', deck);
 
   // Add cards to the deck
@@ -33,35 +41,25 @@ async function main() {
     },
   ];
 
-  await db.insert(cardsTable).values(cards);
+  await createCards(cards);
   console.log('Cards added to deck!');
 
   // Get all decks for a user
-  const userDecks = await db
-    .select()
-    .from(decksTable)
-    .where(eq(decksTable.userId, 'user_example123'));
+  const userDecks = await getDecksByUserId('user_example123');
   console.log('User decks:', userDecks);
 
   // Get all cards in a deck
-  const deckCards = await db
-    .select()
-    .from(cardsTable)
-    .where(eq(cardsTable.deckId, deck.id));
+  const deckCards = await getCardsByDeckId(deck.id);
   console.log('Cards in deck:', deckCards);
 
   // Update a card
-  await db
-    .update(cardsTable)
-    .set({
-      back: 'Собачка',
-      updatedAt: new Date(),
-    })
-    .where(eq(cardsTable.front, 'Dog'));
+  await updateCardByFront('Dog', {
+    back: 'Собачка',
+  });
   console.log('Card updated!');
 
   // Delete a deck (will cascade delete all cards)
-  await db.delete(decksTable).where(eq(decksTable.id, deck.id));
+  await deleteDeck(deck.id);
   console.log('Deck and all its cards deleted!');
 }
 

@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { SignIn, SignUp } from "@clerk/nextjs";
 
 export default function Home() {
   return (
@@ -13,8 +15,24 @@ export default function Home() {
           </p>
         </div>
         <div className="flex gap-4">
-          <Button size="lg">Sign In</Button>
-          <Button size="lg" variant="outline">Sign Up</Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="lg">Sign In</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogTitle className="sr-only">Sign In</DialogTitle>
+              <SignIn routing="hash" />
+            </DialogContent>
+          </Dialog>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="lg" variant="outline">Sign Up</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogTitle className="sr-only">Sign Up</DialogTitle>
+              <SignUp routing="hash" />
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
     </div>
