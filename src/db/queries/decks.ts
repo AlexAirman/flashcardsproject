@@ -25,6 +25,25 @@ export async function getDeckById(deckId: number) {
 }
 
 /**
+ * Get a single deck by ID and verify ownership (SECURE)
+ */
+export async function getDeckByIdForUser(deckId: number, userId: string) {
+  const [deck] = await db
+    .select()
+    .from(decksTable)
+    .where(
+      eq(decksTable.id, deckId)
+    );
+  
+  // Verify ownership
+  if (deck && deck.userId !== userId) {
+    return null;
+  }
+  
+  return deck;
+}
+
+/**
  * Create a new deck
  */
 export async function createDeck(data: typeof decksTable.$inferInsert) {

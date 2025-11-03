@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,6 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getDecksByUserId } from "@/db/queries/decks";
+import { getCardsByDeckId } from "@/db/queries/cards";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -15,6 +18,23 @@ export default async function DashboardPage() {
   if (!userId) {
     redirect("/");
   }
+
+  // Fetch user's decks
+  const decks = await getDecksByUserId(userId);
+  
+  // Get card counts for each deck
+  const decksWithCardCounts = await Promise.all(
+    decks.map(async (deck) => {
+      const cards = await getCardsByDeckId(deck.id);
+      return {
+        ...deck,
+        cardCount: cards.length,
+      };
+    })
+  );
+
+  // Calculate total cards
+  const totalCards = decksWithCardCounts.reduce((sum, deck) => sum + deck.cardCount, 0);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
@@ -28,89 +48,103 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Statistics Overview */}
+        <div className="grid gap-6 md:grid-cols-3 mb-8">
           <Card>
             <CardHeader>
-              <CardTitle>My Decks</CardTitle>
-              <CardDescription>
-                View and manage your flashcard decks
-              </CardDescription>
+              <CardTitle>Total Decks</CardTitle>
+              <CardDescription>Your flashcard collections</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                  No decks yet. Create your first deck to get started!
-                </p>
-                <Button>Create New Deck</Button>
+              <div className="text-4xl font-bold text-black dark:text-zinc-50">
+                {decks.length}
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Study Session</CardTitle>
-              <CardDescription>
-                Start learning with your flashcards
-              </CardDescription>
+              <CardTitle>Total Cards</CardTitle>
+              <CardDescription>Across all decks</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                  Ready to practice? Start a study session now!
-                </p>
-                <Button variant="outline">Start Studying</Button>
+              <div className="text-4xl font-bold text-black dark:text-zinc-50">
+                {totalCards}
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Statistics</CardTitle>
-              <CardDescription>
-                Track your learning progress
-              </CardDescription>
+              <CardTitle>Ready to Study</CardTitle>
+              <CardDescription>Start learning now</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-2">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-zinc-600 dark:text-zinc-400">
-                      Cards studied
-                    </span>
-                    <span className="font-semibold">0</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-zinc-600 dark:text-zinc-400">
-                      Total decks
-                    </span>
-                    <span className="font-semibold">0</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-zinc-600 dark:text-zinc-400">
-                      Study streak
-                    </span>
-                    <span className="font-semibold">0 days</span>
-                  </div>
-                </div>
-              </div>
+              <Button className="w-full" variant="default">
+                Begin Study Session
+              </Button>
             </CardContent>
           </Card>
         </div>
 
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>
-                Your latest flashcard activity
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                No recent activity. Start studying to see your progress here!
-              </p>
-            </CardContent>
-          </Card>
+        {/* My Decks Section */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-black dark:text-zinc-50">
+              My Decks
+            </h2>
+            <Button>Create New Deck</Button>
+          </div>
+          
+          {decksWithCardCounts.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-zinc-600 dark:text-zinc-400">
+                  No decks yet. Create your first deck to get started!
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {decksWithCardCounts.map((deck) => (
+                <Card key={deck.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="text-xl">
+                      <Link 
+                        href={`/decks/${deck.id}`}
+                        className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      >
+                        {deck.name}
+                      </Link>
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {deck.description || "No description"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-zinc-600 dark:text-zinc-400">
+                          Cards
+                        </span>
+                        <span className="font-semibold text-lg text-black dark:text-zinc-50">
+                          {deck.cardCount}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button className="flex-1" size="sm">
+                          Study
+                        </Button>
+                        <Button className="flex-1" variant="outline" size="sm">
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
