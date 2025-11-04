@@ -76,6 +76,11 @@ export default async function DeckPage({ params }: Props) {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              {cards.length > 0 && (
+                <Link href={`/decks/${deckIdNum}/study`}>
+                  <Button variant="default">Study Cards</Button>
+                </Link>
+              )}
               <EditDeckDialog 
                 deckId={deckIdNum}
                 currentName={deck.name}

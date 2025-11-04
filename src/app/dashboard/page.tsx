@@ -132,12 +132,22 @@ export default async function DashboardPage() {
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <Button className="flex-1" size="sm">
-                          Study
-                        </Button>
-                        <Button className="flex-1" variant="outline" size="sm">
-                          Edit
-                        </Button>
+                        {deck.cardCount > 0 ? (
+                          <Link href={`/decks/${deck.id}/study`} className="flex-1">
+                            <Button className="w-full" size="sm">
+                              Study
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Button className="flex-1" size="sm" disabled>
+                            Study
+                          </Button>
+                        )}
+                        <Link href={`/decks/${deck.id}`} className="flex-1">
+                          <Button className="w-full" variant="outline" size="sm">
+                            Edit
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </CardContent>
