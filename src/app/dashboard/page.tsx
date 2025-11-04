@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { getDecksByUserId } from "@/db/queries/decks";
 import { getCardsByDeckId } from "@/db/queries/cards";
+import { CreateDeckDialog } from "./create-deck-dialog";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -93,7 +94,7 @@ export default async function DashboardPage() {
             <h2 className="text-2xl font-bold text-black dark:text-zinc-50">
               My Decks
             </h2>
-            <Button>Create New Deck</Button>
+            <CreateDeckDialog />
           </div>
           
           {decksWithCardCounts.length === 0 ? (

@@ -2,17 +2,58 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { getDeckByIdForUser, updateDeck } from "@/db/queries/decks";
+import { getDeckByIdForUser, updateDeck, createDeck, deleteDeck } from "@/db/queries/decks";
 import { z } from "zod";
 
 // Validation schemas
+const createDeckSchema = z.object({
+  name: z.string().min(1, "Name is required").max(255),
+  description: z.string().max(1000).optional(),
+});
+
 const updateDeckSchema = z.object({
   deckId: z.number(),
   name: z.string().min(1, "Name is required").max(255),
   description: z.string().max(1000).optional(),
 });
 
+const deleteDeckSchema = z.object({
+  deckId: z.number(),
+});
+
+export type CreateDeckInput = z.infer<typeof createDeckSchema>;
 export type UpdateDeckInput = z.infer<typeof updateDeckSchema>;
+export type DeleteDeckInput = z.infer<typeof deleteDeckSchema>;
+
+// Create deck action
+export async function createDeckAction(input: CreateDeckInput) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Validate input
+    const validated = createDeckSchema.parse(input);
+
+    // Create the deck
+    const newDeck = await createDeck({
+      userId,
+      name: validated.name,
+      description: validated.description || null,
+    });
+
+    revalidatePath('/dashboard');
+
+    return { success: true, data: newDeck };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.issues[0].message };
+    }
+    return { success: false, error: "Failed to create deck" };
+  }
+}
 
 // Update deck action
 export async function updateDeckAction(input: UpdateDeckInput) {
@@ -45,9 +86,42 @@ export async function updateDeckAction(input: UpdateDeckInput) {
     return { success: true, data: updatedDeck };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
+      return { success: false, error: error.issues[0].message };
     }
     return { success: false, error: "Failed to update deck" };
+  }
+}
+
+// Delete deck action
+export async function deleteDeckAction(input: DeleteDeckInput) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Validate input
+    const validated = deleteDeckSchema.parse(input);
+
+    // Verify ownership
+    const deck = await getDeckByIdForUser(validated.deckId, userId);
+    
+    if (!deck) {
+      return { success: false, error: "Deck not found or access denied" };
+    }
+
+    // Delete the deck (will cascade delete all cards)
+    await deleteDeck(validated.deckId);
+
+    revalidatePath('/dashboard');
+
+    return { success: true };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.issues[0].message };
+    }
+    return { success: false, error: "Failed to delete deck" };
   }
 }
 

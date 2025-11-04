@@ -6,6 +6,7 @@ import { getCardsByDeckId } from "@/db/queries/cards";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditDeckDialog } from "./edit-deck-dialog";
+import { DeleteDeckDialog } from "./delete-deck-dialog";
 import { AddCardDialog } from "./add-card-dialog";
 import { EditCardDialog } from "./edit-card-dialog";
 import { DeleteCardDialog } from "./delete-card-dialog";
@@ -81,12 +82,17 @@ export default async function DeckPage({ params }: Props) {
                   <Button variant="default">Study Cards</Button>
                 </Link>
               )}
+              <AddCardDialog deckId={deckIdNum} />
               <EditDeckDialog 
                 deckId={deckIdNum}
                 currentName={deck.name}
                 currentDescription={deck.description}
               />
-              <AddCardDialog deckId={deckIdNum} />
+              <DeleteDeckDialog 
+                deckId={deckIdNum}
+                deckName={deck.name}
+                cardCount={cards.length}
+              />
             </div>
           </div>
         </CardHeader>
