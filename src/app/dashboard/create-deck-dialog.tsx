@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createDeckAction, type CreateDeckInput } from '@/app/actions/decks';
+import { createDeckAction, type CreateDeckInput, type CreateDeckResult } from '@/app/actions/decks';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,6 +14,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import Link from 'next/link';
 
 export function CreateDeckDialog() {
   const [open, setOpen] = useState(false);
@@ -21,10 +22,12 @@ export function CreateDeckDialog() {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requiresUpgrade, setRequiresUpgrade] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setRequiresUpgrade(false);
     setIsSubmitting(true);
 
     const input: CreateDeckInput = {
@@ -40,6 +43,7 @@ export function CreateDeckDialog() {
       setOpen(false);
     } else {
       setError(result.error || 'Failed to create deck');
+      setRequiresUpgrade(result.requiresUpgrade || false);
     }
 
     setIsSubmitting(false);
@@ -81,7 +85,16 @@ export function CreateDeckDialog() {
             />
           </div>
           {error && (
-            <p className="text-sm text-red-500">{error}</p>
+            <div className="space-y-2">
+              <p className="text-sm text-red-500">{error}</p>
+              {requiresUpgrade && (
+                <Link href="/pricing">
+                  <Button type="button" variant="outline" className="w-full" size="sm">
+                    View Pricing Plans
+                  </Button>
+                </Link>
+              )}
+            </div>
           )}
           <div className="flex justify-end gap-2">
             <Button

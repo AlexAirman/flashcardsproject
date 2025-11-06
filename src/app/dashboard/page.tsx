@@ -14,11 +14,15 @@ import { getCardsByDeckId } from "@/db/queries/cards";
 import { CreateDeckDialog } from "./create-deck-dialog";
 
 export default async function DashboardPage() {
-  const { userId } = await auth();
+  const { userId, has } = await auth();
 
   if (!userId) {
     redirect("/");
   }
+
+  // Check user's plan features
+  const hasUnlimitedDecks = has({ feature: 'unlimited_decks' });
+  const isFreePlan = !hasUnlimitedDecks;
 
   // Fetch user's decks
   const decks = await getDecksByUserId(userId);
@@ -93,9 +97,47 @@ export default async function DashboardPage() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-black dark:text-zinc-50">
               My Decks
+              {isFreePlan && (
+                <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                  ({decks.length}/3)
+                </span>
+              )}
             </h2>
-            <CreateDeckDialog />
+            {isFreePlan && decks.length >= 3 ? (
+              <div className="flex items-center gap-2">
+                <Link href="/pricing">
+                  <Button>
+                    Upgrade to Pro
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <CreateDeckDialog />
+            )}
           </div>
+          
+          {/* Upgrade banner for users at deck limit */}
+          {isFreePlan && decks.length >= 3 && (
+            <Card className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg text-blue-900 dark:text-blue-100 mb-1">
+                      You've reached your deck limit
+                    </h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                      Upgrade to Pro to create unlimited decks and unlock AI-powered flashcard generation!
+                    </p>
+                    <Link href="/pricing">
+                      <Button size="sm">
+                        View Plans
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           
           {decksWithCardCounts.length === 0 ? (
             <Card>

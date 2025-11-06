@@ -25,13 +25,34 @@ export type CreateDeckInput = z.infer<typeof createDeckSchema>;
 export type UpdateDeckInput = z.infer<typeof updateDeckSchema>;
 export type DeleteDeckInput = z.infer<typeof deleteDeckSchema>;
 
+export type CreateDeckResult = 
+  | { success: true; data: any }
+  | { success: false; error: string; requiresUpgrade?: boolean };
+
 // Create deck action
-export async function createDeckAction(input: CreateDeckInput) {
+export async function createDeckAction(input: CreateDeckInput): Promise<CreateDeckResult> {
   try {
-    const { userId } = await auth();
+    const { userId, has } = await auth();
     
     if (!userId) {
       return { success: false, error: "Unauthorized" };
+    }
+
+    // Check if user has unlimited decks feature
+    const hasUnlimitedDecks = has({ feature: 'unlimited_decks' });
+    
+    if (!hasUnlimitedDecks) {
+      // Free users are limited to 3 decks
+      const { getDecksByUserId } = await import("@/db/queries/decks");
+      const existingDecks = await getDecksByUserId(userId);
+      
+      if (existingDecks.length >= 3) {
+        return { 
+          success: false, 
+          error: "You've reached the 3 deck limit on the free plan. Upgrade to Pro for unlimited decks!",
+          requiresUpgrade: true
+        };
+      }
     }
 
     // Validate input
