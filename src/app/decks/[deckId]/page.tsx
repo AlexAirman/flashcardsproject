@@ -10,6 +10,7 @@ import { DeleteDeckDialog } from "./delete-deck-dialog";
 import { AddCardDialog } from "./add-card-dialog";
 import { EditCardDialog } from "./edit-card-dialog";
 import { DeleteCardDialog } from "./delete-card-dialog";
+import { GenerateCardsButton } from "./generate-cards-button";
 
 type Props = {
   params: Promise<{
@@ -19,7 +20,7 @@ type Props = {
 
 export default async function DeckPage({ params }: Props) {
   // Get authenticated user
-  const { userId } = await auth();
+  const { userId, has } = await auth();
   
   if (!userId) {
     return (
@@ -33,6 +34,9 @@ export default async function DeckPage({ params }: Props) {
       </div>
     );
   }
+
+  // Check if user has AI generation feature
+  const hasAIFeature = has({ feature: 'ai_flashcard_generation_feature' });
 
   // Get deck ID from params
   const { deckId } = await params;
@@ -82,6 +86,12 @@ export default async function DeckPage({ params }: Props) {
                   <Button variant="default">Study Cards</Button>
                 </Link>
               )}
+              <GenerateCardsButton
+                deckId={deckIdNum}
+                deckName={deck.name}
+                deckDescription={deck.description}
+                hasAIFeature={hasAIFeature}
+              />
               <AddCardDialog deckId={deckIdNum} />
               <EditDeckDialog 
                 deckId={deckIdNum}

@@ -47,7 +47,7 @@ export function DeleteDeckDialog({ deckId, deckName, cardCount }: DeleteDeckDial
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="destructive">Delete Deck</Button>
+        <Button variant="destructive" suppressHydrationWarning>Delete Deck</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

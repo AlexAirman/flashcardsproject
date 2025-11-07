@@ -53,7 +53,7 @@ export function EditDeckDialog({ deckId, currentName, currentDescription }: Edit
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Edit Deck</Button>
+        <Button variant="outline" suppressHydrationWarning>Edit Deck</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

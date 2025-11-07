@@ -52,7 +52,7 @@ export function AddCardDialog({ deckId }: AddCardDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Add Card</Button>
+        <Button suppressHydrationWarning>Add Card</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

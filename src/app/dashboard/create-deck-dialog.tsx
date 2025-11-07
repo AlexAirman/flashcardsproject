@@ -52,7 +52,7 @@ export function CreateDeckDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Create New Deck</Button>
+        <Button suppressHydrationWarning>Create New Deck</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

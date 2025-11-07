@@ -54,7 +54,7 @@ export function EditCardDialog({ cardId, deckId, currentFront, currentBack }: Ed
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">Edit</Button>
+        <Button variant="outline" size="sm" suppressHydrationWarning>Edit</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

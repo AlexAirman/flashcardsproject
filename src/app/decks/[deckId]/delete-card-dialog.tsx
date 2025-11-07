@@ -50,7 +50,7 @@ export function DeleteCardDialog({ cardId, deckId }: DeleteCardDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive" size="sm">Delete</Button>
+        <Button variant="destructive" size="sm" suppressHydrationWarning>Delete</Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
