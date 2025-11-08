@@ -54,42 +54,19 @@ export default async function DashboardPage() {
         </div>
 
         {/* Statistics Overview */}
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Total Decks</CardTitle>
-              <CardDescription>Your flashcard collections</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-black dark:text-zinc-50">
-                {decks.length}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Total Cards</CardTitle>
-              <CardDescription>Across all decks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-black dark:text-zinc-50">
-                {totalCards}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Ready to Study</CardTitle>
-              <CardDescription>Start learning now</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" variant="default">
-                Begin Study Session
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="flex gap-6 mb-8 text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-black dark:text-zinc-50">
+              {decks.length}
+            </span>
+            <span>Total Decks</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-black dark:text-zinc-50">
+              {totalCards}
+            </span>
+            <span>Total Cards</span>
+          </div>
         </div>
 
         {/* My Decks Section */}

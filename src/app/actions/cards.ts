@@ -180,18 +180,63 @@ export async function generateCardsWithAIAction(input: GenerateCardsInput) {
       };
     }
 
-    // Generate cards using AI
-    const { object } = await generateObject({
-      model: openai('gpt-4o-mini'), // gpt-4o-mini supports structured outputs and is cost-effective
-      schema: z.object({
+    // Detect if this is a language learning deck
+    const deckContent = `${validated.deckName} ${validated.deckDescription || ''}`.toLowerCase();
+    const languageKeywords = [
+      'language', 'vocab', 'vocabulary', 'words', 'phrases', 'translation',
+      'spanish', 'french', 'german', 'italian', 'portuguese', 'russian',
+      'chinese', 'japanese', 'korean', 'arabic', 'hindi', 'polish',
+      'dutch', 'swedish', 'danish', 'norwegian', 'finnish', 'greek',
+      'hebrew', 'turkish', 'vietnamese', 'thai', 'indonesian'
+    ];
+    const isLanguageLearning = languageKeywords.some(keyword => deckContent.includes(keyword));
+
+    // Generate appropriate prompt based on content type
+    let prompt: string;
+    let schema: z.ZodObject<any>;
+    
+    if (isLanguageLearning) {
+      // For language learning: simple, direct translations
+      schema = z.object({
         cards: z.array(
           z.object({
-            front: z.string().min(1).max(500).describe('The question or term on the front of the flashcard'),
-            back: z.string().min(1).max(1000).describe('The answer or definition on the back of the flashcard'),
+            front: z.string().min(1).max(200).describe('English word or phrase'),
+            back: z.string().min(1).max(200).describe('Direct translation only, no explanations'),
           })
-        ).min(15).max(25), // Be flexible: accept 15-25 cards instead of exactly 20
-      }),
-      prompt: `Generate 20 educational flashcards about "${validated.deckName}"${
+        ).min(15).max(25),
+      });
+      
+      prompt = `Generate 20 flashcards for learning ${validated.deckName}${
+        validated.deckDescription ? `. Context: ${validated.deckDescription}` : ''
+      }.
+
+CRITICAL REQUIREMENTS:
+- front: English word or simple phrase
+- back: Direct translation ONLY - no explanations, no context, no additional information
+- Keep translations concise and accurate
+- Include common words, phrases, and useful expressions
+- Vary between nouns, verbs, adjectives, and common phrases
+
+Example format:
+front: "hello"
+back: "hola"
+
+front: "thank you"
+back: "gracias"
+
+DO NOT include explanations or cultural context. Just pure translations.`;
+    } else {
+      // For other topics: more detailed educational content
+      schema = z.object({
+        cards: z.array(
+          z.object({
+            front: z.string().min(1).max(500).describe('Clear question or term'),
+            back: z.string().min(1).max(1000).describe('Comprehensive answer or definition'),
+          })
+        ).min(15).max(25),
+      });
+      
+      prompt = `Generate 20 educational flashcards about "${validated.deckName}"${
         validated.deckDescription ? `. Additional context: ${validated.deckDescription}` : ''
       }.
 
@@ -199,7 +244,14 @@ Each flashcard should have:
 - front: A clear, concise question or term (max 500 characters)
 - back: A comprehensive answer or definition (max 1000 characters)
 
-Make the content educational, accurate, and appropriate for the topic. Vary the difficulty and style of questions.`,
+Make the content educational, accurate, and appropriate for the topic. Vary the difficulty and style of questions.`;
+    }
+
+    // Generate cards using AI
+    const { object } = await generateObject({
+      model: openai('gpt-4o-mini'), // gpt-4o-mini supports structured outputs and is cost-effective
+      schema,
+      prompt,
     });
     
     // Validate we got a reasonable number of cards
