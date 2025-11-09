@@ -65,7 +65,7 @@ export default async function StudyPage({ params }: Props) {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              This deck doesn't have any cards yet. Add some cards to start studying!
+              This deck doesn&apos;t have any cards yet. Add some cards to start studying!
             </p>
             <Link href={`/decks/${deckId}`}>
               <Button>Go to Deck</Button>

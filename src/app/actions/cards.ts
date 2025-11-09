@@ -70,7 +70,7 @@ export async function createCardAction(input: CreateCardInput) {
     return { success: true, data: card };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
+      return { success: false, error: error.issues[0].message };
     }
     return { success: false, error: "Failed to create card" };
   }
@@ -107,7 +107,7 @@ export async function updateCardAction(input: UpdateCardInput) {
     return { success: true, data: card };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
+      return { success: false, error: error.issues[0].message };
     }
     return { success: false, error: "Failed to update card" };
   }
@@ -141,7 +141,7 @@ export async function deleteCardAction(input: DeleteCardInput) {
     return { success: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
+      return { success: false, error: error.issues[0].message };
     }
     return { success: false, error: "Failed to delete card" };
   }
@@ -193,7 +193,7 @@ export async function generateCardsWithAIAction(input: GenerateCardsInput) {
 
     // Generate appropriate prompt based on content type
     let prompt: string;
-    let schema: z.ZodObject<any>;
+    let schema: z.ZodType<{ cards: Array<{ front: string; back: string }> }>;
     
     if (isLanguageLearning) {
       // For language learning: simple, direct translations
@@ -254,14 +254,17 @@ Make the content educational, accurate, and appropriate for the topic. Vary the 
       prompt,
     });
     
+    // Type assertion for the generated cards
+    const generatedCards = object.cards as Array<{ front: string; back: string }>;
+    
     // Validate we got a reasonable number of cards
-    if (object.cards.length < 15) {
-      throw new Error(`Only generated ${object.cards.length} cards, expected at least 15`);
+    if (generatedCards.length < 15) {
+      throw new Error(`Only generated ${generatedCards.length} cards, expected at least 15`);
     }
 
     // Insert generated cards into database
     const insertedCards = [];
-    for (const card of object.cards) {
+    for (const card of generatedCards) {
       const insertedCard = await createCard({
         deckId: validated.deckId,
         front: card.front,
@@ -285,7 +288,7 @@ Make the content educational, accurate, and appropriate for the topic. Vary the 
     }
     
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
+      return { success: false, error: error.issues[0].message };
     }
     
     // Return more specific error messages

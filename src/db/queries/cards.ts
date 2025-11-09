@@ -14,19 +14,8 @@ export async function getCardsByDeckId(deckId: number) {
 }
 
 /**
- * Get a single card by ID
- */
-export async function getCardById(cardId: number) {
-  const [card] = await db
-    .select()
-    .from(cardsTable)
-    .where(eq(cardsTable.id, cardId));
-  
-  return card;
-}
-
-/**
  * Create a new card
+ * Note: Deck ownership should be verified before calling this function
  */
 export async function createCard(data: typeof cardsTable.$inferInsert) {
   const [card] = await db
@@ -49,6 +38,7 @@ export async function createCards(cards: (typeof cardsTable.$inferInsert)[]) {
 
 /**
  * Update an existing card
+ * Note: Deck ownership should be verified before calling this function
  */
 export async function updateCard(
   cardId: number,
@@ -67,26 +57,8 @@ export async function updateCard(
 }
 
 /**
- * Update a card by matching front text (for example purposes)
- */
-export async function updateCardByFront(
-  front: string,
-  data: Partial<typeof cardsTable.$inferInsert>
-) {
-  const [card] = await db
-    .update(cardsTable)
-    .set({
-      ...data,
-      updatedAt: new Date(),
-    })
-    .where(eq(cardsTable.front, front))
-    .returning();
-  
-  return card;
-}
-
-/**
  * Delete a card
+ * Note: Deck ownership should be verified before calling this function
  */
 export async function deleteCard(cardId: number) {
   await db

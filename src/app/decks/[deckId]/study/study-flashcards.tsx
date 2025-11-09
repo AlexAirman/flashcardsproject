@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
@@ -32,20 +32,25 @@ type StudyFlashcardsProps = {
 export function StudyFlashcards({ deck, cards }: StudyFlashcardsProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [shuffleSeed, setShuffleSeed] = useState(0);
   const [isShuffled, setIsShuffled] = useState(false);
   const [answers, setAnswers] = useState<Map<number, boolean>>(new Map());
 
-  // Shuffle cards if shuffle mode is enabled
+  // Shuffle cards based on shuffle mode
   const studyCards = useMemo(() => {
     if (!isShuffled) return cards;
     
+    // Use shuffle seed to create deterministic shuffle for this session
     const shuffled = [...cards];
+    // Simple seeded shuffle using shuffleSeed
+    const seed = shuffleSeed;
     for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      // Create pseudo-random number based on seed and index
+      const j = Math.abs((seed * (i + 1) * 9301 + 49297) % 233280) % (i + 1);
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
-  }, [cards, isShuffled]);
+  }, [cards, isShuffled, shuffleSeed]);
 
   const currentCard = studyCards[currentIndex];
   const progress = ((currentIndex + 1) / studyCards.length) * 100;
@@ -83,6 +88,7 @@ export function StudyFlashcards({ deck, cards }: StudyFlashcardsProps) {
 
   const handleShuffle = () => {
     setIsShuffled(!isShuffled);
+    setShuffleSeed(Date.now()); // Generate new seed for shuffle
     setCurrentIndex(0);
     setIsFlipped(false);
     setAnswers(new Map());
@@ -284,7 +290,7 @@ export function StudyFlashcards({ deck, cards }: StudyFlashcardsProps) {
               🎉 Study Session Complete!
             </h3>
             <p className="text-muted-foreground mb-4">
-              You've completed all {studyCards.length} cards in this deck!
+              You&apos;ve completed all {studyCards.length} cards in this deck!
             </p>
             
             {/* Final Score */}
@@ -309,7 +315,7 @@ export function StudyFlashcards({ deck, cards }: StudyFlashcardsProps) {
                   <p className="text-yellow-600 dark:text-yellow-400 font-semibold">Good effort! Practice makes perfect! 💪</p>
                 )}
                 {scorePercentage < 60 && (
-                  <p className="text-orange-600 dark:text-orange-400 font-semibold">Keep practicing! You'll get there! 📚</p>
+                  <p className="text-orange-600 dark:text-orange-400 font-semibold">Keep practicing! You&apos;ll get there! 📚</p>
                 )}
               </div>
             </div>

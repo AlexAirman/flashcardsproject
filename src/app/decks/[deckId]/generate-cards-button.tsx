@@ -61,7 +61,7 @@ export function GenerateCardsButton({
           toast.error(result.error || "Failed to generate cards");
         }
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred while generating cards");
     } finally {
       setIsGenerating(false);

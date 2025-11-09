@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createDeckAction, type CreateDeckInput, type CreateDeckResult } from '@/app/actions/decks';
+import { createDeckAction, type CreateDeckInput } from '@/app/actions/decks';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

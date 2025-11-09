@@ -59,7 +59,7 @@ export function EditDeckDialog({ deckId, currentName, currentDescription }: Edit
         <DialogHeader>
           <DialogTitle>Edit Deck</DialogTitle>
           <DialogDescription>
-            Update your deck's name and description.
+            Update your deck&apos;s name and description.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

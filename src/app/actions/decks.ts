@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { getDeckByIdForUser, updateDeck, createDeck, deleteDeck } from "@/db/queries/decks";
 import { z } from "zod";
+import { decksTable } from "@/db/schema";
 
 // Validation schemas
 const createDeckSchema = z.object({
@@ -26,7 +27,7 @@ export type UpdateDeckInput = z.infer<typeof updateDeckSchema>;
 export type DeleteDeckInput = z.infer<typeof deleteDeckSchema>;
 
 export type CreateDeckResult = 
-  | { success: true; data: any }
+  | { success: true; data: typeof decksTable.$inferSelect }
   | { success: false; error: string; requiresUpgrade?: boolean };
 
 // Create deck action
@@ -96,7 +97,7 @@ export async function updateDeckAction(input: UpdateDeckInput) {
     }
 
     // Update the deck
-    const updatedDeck = await updateDeck(validated.deckId, {
+    const updatedDeck = await updateDeck(validated.deckId, userId, {
       name: validated.name,
       description: validated.description,
     });
@@ -133,7 +134,7 @@ export async function deleteDeckAction(input: DeleteDeckInput) {
     }
 
     // Delete the deck (will cascade delete all cards)
-    await deleteDeck(validated.deckId);
+    await deleteDeck(validated.deckId, userId);
 
     revalidatePath('/dashboard');
 

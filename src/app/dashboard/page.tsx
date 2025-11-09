@@ -100,7 +100,7 @@ export default async function DashboardPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-semibold text-lg text-blue-900 dark:text-blue-100 mb-1">
-                      You've reached your deck limit
+                      You&apos;ve reached your deck limit
                     </h3>
                     <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
                       Upgrade to Pro to create unlimited decks and unlock AI-powered flashcard generation!

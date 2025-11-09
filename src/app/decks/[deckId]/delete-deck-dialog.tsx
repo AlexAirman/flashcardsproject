@@ -53,7 +53,7 @@ export function DeleteDeckDialog({ deckId, deckName, cardCount }: DeleteDeckDial
         <DialogHeader>
           <DialogTitle>Delete Deck</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete the deck "{deckName}"?
+            Are you sure you want to delete the deck &quot;{deckName}&quot;?
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

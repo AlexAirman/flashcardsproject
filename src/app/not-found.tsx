@@ -12,7 +12,7 @@ export default function NotFound() {
           Page Not Found
         </h2>
         <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-8 max-w-md mx-auto">
-          The page you're looking for doesn't exist or hasn't been created yet.
+          The page you&apos;re looking for doesn&apos;t exist or hasn&apos;t been created yet.
         </p>
         <Link href="/dashboard">
           <Button size="lg">

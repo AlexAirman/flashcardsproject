@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../index';
 import { decksTable } from '../schema';
 
@@ -13,34 +13,21 @@ export async function getDecksByUserId(userId: string) {
 }
 
 /**
- * Get a single deck by ID
- */
-export async function getDeckById(deckId: number) {
-  const [deck] = await db
-    .select()
-    .from(decksTable)
-    .where(eq(decksTable.id, deckId));
-  
-  return deck;
-}
-
-/**
  * Get a single deck by ID and verify ownership (SECURE)
+ * ALWAYS filters by both deckId AND userId to ensure data isolation
  */
 export async function getDeckByIdForUser(deckId: number, userId: string) {
   const [deck] = await db
     .select()
     .from(decksTable)
     .where(
-      eq(decksTable.id, deckId)
+      and(
+        eq(decksTable.id, deckId),
+        eq(decksTable.userId, userId) // REQUIRED - verify ownership
+      )
     );
   
-  // Verify ownership
-  if (deck && deck.userId !== userId) {
-    return null;
-  }
-  
-  return deck;
+  return deck || null;
 }
 
 /**
@@ -57,9 +44,11 @@ export async function createDeck(data: typeof decksTable.$inferInsert) {
 
 /**
  * Update an existing deck
+ * REQUIRES both deckId AND userId for security
  */
 export async function updateDeck(
   deckId: number,
+  userId: string,
   data: Partial<typeof decksTable.$inferInsert>
 ) {
   const [deck] = await db
@@ -68,7 +57,12 @@ export async function updateDeck(
       ...data,
       updatedAt: new Date(),
     })
-    .where(eq(decksTable.id, deckId))
+    .where(
+      and(
+        eq(decksTable.id, deckId),
+        eq(decksTable.userId, userId) // REQUIRED - verify ownership
+      )
+    )
     .returning();
   
   return deck;
@@ -76,10 +70,16 @@ export async function updateDeck(
 
 /**
  * Delete a deck (will cascade delete all cards)
+ * REQUIRES both deckId AND userId for security
  */
-export async function deleteDeck(deckId: number) {
+export async function deleteDeck(deckId: number, userId: string) {
   await db
     .delete(decksTable)
-    .where(eq(decksTable.id, deckId));
+    .where(
+      and(
+        eq(decksTable.id, deckId),
+        eq(decksTable.userId, userId) // REQUIRED - verify ownership
+      )
+    );
 }
 

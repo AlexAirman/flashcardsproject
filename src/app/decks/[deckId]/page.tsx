@@ -113,7 +113,7 @@ export default async function DeckPage({ params }: Props) {
         {cards.length === 0 ? (
           <Card className="col-span-full">
             <CardContent className="py-8 text-center text-muted-foreground">
-              No cards in this deck yet. Click "Add Card" to create your first flashcard!
+              No cards in this deck yet. Click &quot;Add Card&quot; to create your first flashcard!
             </CardContent>
           </Card>
         ) : (
